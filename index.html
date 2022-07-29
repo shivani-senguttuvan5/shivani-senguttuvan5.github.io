@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html>
+    <!--References used for HTML/CSS: 
+    https://www.w3schools.com/css/css_margin.asp 
+    https://www.w3schools.com/cssref/pr_class_display.asp 
+    https://www.w3schools.com/css/css_font.asp 
+    https://www.w3schools.com/css/css3_buttons.asp 
+    https://www.w3schools.com/js/js_htmldom_eventlistener.asp
+    https://www.w3schools.com/css/css_rwd_viewport.asp 
+    https://stackoverflow.com/questions/39149846
+    -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-annotation/2.5.1/d3-annotation.min.js"></script>
+    <style>
+        #tooltip{
+            width: 85px; 
+            height: 50px;
+            opacity: 0;
+            position: absolute;
+            text-align: center;
+            background: #7c9bcc;
+            color: black;
+            border: 0px;
+        }
+        #svg{
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+            width: 70%;
+            background-color: rgb(249, 242, 241);
+        }
+        #header{
+            text-align: center;
+            font-family: "Arial";
+            color:#7c9bcc;
+            font-size: 28px;
+        }
+        .axisTitles{
+            text-align: center;
+            font-family: "Arial";
+            font-size: 15px;   
+        }
+        .slideshow{
+            background-color: rgb(249, 242, 241);
+            font-size: 15px;
+            border-radius: 4px;
+            border: 2px solid #7c9bcc;
+            padding: 7px 12px;
+        }
+        .bar{
+            fill:#7c9bcc;
+        }
+        #intro{
+            font-family: "Arial";
+            font-size: 15px;
+            color:rgb(94, 95, 95);
+        }
+        #slideMessage{
+            font-family: "Arial";
+            font-size: 14px;
+            color:rgb(94, 95, 95);
+            display:inline-block;
+        }
+    </style>
+    <head>
+        <title>Heart Failure</title>
+        <link rel="shortcut icon" href="#">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body onload="init()">
+
+    <h1 id="header">Medical Conditions that might Cause Heart Failure Over Various Follow-Up Periods</h1>
+
+    <p id="intro">Patients in this study were divided into three groups based on their follow-up periods: 0-100, 100-200, and 200-300 days. 
+        A patient may have anemia, diabetes, high blood pressure, or a smoking habit (or any combination of these conditions). Observe how 
+        the number of patients diagnosed with each condition changes based on the different follow up periods (slides 1-3). Hovering over each 
+        bar reveals a tooltip, which shows the percentage of deceased patients. Current graph is on Slide 1 (scene 1)!</p>
+
+    <p id="slideMessage">Advance to next slide: </p>
+
+    <button type="button" class="slideshow" id= "slideOne" onclick="createSceneOne()">Slide 1</button>
+    <button type="button" class="slideshow" id= "slideTwo" onclick="createSceneTwo()">Slide 2</button>
+    <button type="button" class="slideshow" id= "slideThree" onclick="createSceneThree()">Slide 3</button>
+
+    <svg id = "svg" width=1000 height=590></svg>
+
+    <div id="tooltip"></div>
+
+    <script>
+
+        // referred to CampusWire posts to complete this project
+        var width = 790;
+        var height = 490;
+        var margin = 50;
+
+        async function init(){
+
+            document.getElementById('svg').style.display = "block";
+
+            // load the data. Data is from https://archive.ics.uci.edu/ml/datasets/Heart+failure+clinical+records
+            // reference: lecture notes 8-2-5
+            const data = await d3.csv('heart_failure_clinical_records_dataset.csv');
+            features = ["Anaemia", "Diabetes", "High Blood Pressure", "Smoking"];
+
+            patientCount = 0;
+
+            positiveFirstSlide = {};
+            positiveSecondSlide = {};
+            positiveThirdSlide = {};
+
+            // initialize dictionaries
+            for (var i = 0; i < features.length; i++){
+                positiveFirstSlide[features[i]] = 0;
+                positiveSecondSlide[features[i]] = 0;
+                positiveThirdSlide[features[i]] = 0;
+            }
+
+            // initialize tooltip data
+            deceased1 = new Array(4).fill(0);
+            deceased2 = new Array(4).fill(0);
+            deceased3 = new Array(4).fill(0);
+
+            // loop through the data and populate data variables
+            for (var i = 0; i < data.length; i++){
+                patientCount += 1;
+                
+                // patients with anemia
+                if (data[i].anaemia == 1){if (data[i].time < 100) {positiveFirstSlide["Anaemia"] += 1; if (data[i].DEATH_EVENT == 1){deceased1[0] += 1}}
+                    else if (data[i].time >= 100 & data[i].time < 200) {positiveSecondSlide["Anaemia"] += 1; if (data[i].DEATH_EVENT == 1){deceased2[0] += 1}}
+                    else if (data[i].time >= 200) {positiveThirdSlide["Anaemia"] += 1; if (data[i].DEATH_EVENT == 1){deceased3[0] += 1}}
+                }
+                // patients with diabetes
+                if (data[i].diabetes == 1){
+                    if (data[i].time < 100) {positiveFirstSlide["Diabetes"] += 1; if (data[i].DEATH_EVENT == 1){deceased1[1] += 1}}
+                    else if (data[i].time >= 100 & data[i].time < 200) {positiveSecondSlide["Diabetes"] += 1; if (data[i].DEATH_EVENT == 1){deceased2[1] += 1}}
+                    else if (data[i].time >= 200) {positiveThirdSlide["Diabetes"] += 1; if (data[i].DEATH_EVENT == 1){deceased3[1] += 1}}
+                }
+                // patients with high bp
+                if (data[i].high_blood_pressure == 1){
+                    if (data[i].time < 100) {positiveFirstSlide["High Blood Pressure"] += 1; if (data[i].DEATH_EVENT == 1){deceased1[2] += 1}}
+                    else if (data[i].time >= 100 & data[i].time < 200) {positiveSecondSlide["High Blood Pressure"] += 1; if (data[i].DEATH_EVENT == 1){deceased2[2] += 1}}
+                    else if (data[i].time >= 200) {positiveThirdSlide["High Blood Pressure"] += 1; if (data[i].DEATH_EVENT == 1){deceased3[2] += 1}}
+                }
+                // patients who smoke
+                if (data[i].smoking == 1){
+                    if (data[i].time < 100) {positiveFirstSlide["Smoking"] += 1; if (data[i].DEATH_EVENT == 1){deceased1[3] += 1}}
+                    else if (data[i].time >= 100 & data[i].time < 200) {positiveSecondSlide["Smoking"] += 1; if (data[i].DEATH_EVENT == 1){deceased2[3] += 1}}
+                    else if (data[i].time >= 200) {positiveThirdSlide["Smoking"] += 1; if (data[i].DEATH_EVENT == 1){deceased3[3] += 1}}
+                }
+            }
+
+            temp1 = [];
+            temp2 = [];
+            temp3 = [];
+
+            // populate temp variables with data from each follow-up period
+            // references: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach 
+            //             https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys 
+
+            var k1 = Object.keys(positiveFirstSlide);
+            k1.forEach(function(i){
+                temp1.push(positiveFirstSlide[i]);
+            });
+
+            var k2 = Object.keys(positiveSecondSlide);
+            k2.forEach(function(i){
+                temp2.push(positiveSecondSlide[i]);
+            });
+
+            var k3 = Object.keys(positiveThirdSlide);
+            k3.forEach(function(i){
+                temp3.push(positiveThirdSlide[i]);
+            });
+
+            count1 = [];
+            count2 = [];
+            count3 = [];
+
+            // creating an array of dictionaries
+            for (var i = 0; i < features.length; i++){
+                count1.push({"condition": features[i], "num": temp1[i], "death": deceased1[i]});
+                count2.push({"condition": features[i], "num": temp2[i], "death": deceased2[i]});
+                count3.push({"condition": features[i], "num": temp3[i], "death": deceased3[i]});
+
+            }
+
+            // creating x and y scales
+            // reference: https://stackoverflow.com/questions/38403435/d3-js-v4-set-padding-for-bar-chart 
+            xs = d3.scaleBand().domain(count1.map(function(i){return i.condition;})).range([0,width]).padding(0.75);
+            ys = d3.scaleLinear().domain([0,65]).range([height,0]);
+
+            var tooltip = d3.select("#tooltip");
+
+            // creating annotations for scene 1
+            // reference: https://d3-annotation.susielu.com/ 
+            const annotation = [{note:{
+                                label:"Though more patients suffered from Anemia, the patients who smoked had slightly greater mortality.",
+                                wrap: 150,
+                                padding: 5
+                            },
+                            connector: {
+                                end: "arrow",
+                            },
+                            x: 685,
+                            y: 210,
+                            dx: 5,
+                            dy: -55
+                        }];
+
+            const annotations = d3.annotation().annotations(annotation);
+
+            // creating bar chart for scene 1
+            // reference: lecture notes 7-3-8 and quizzes
+            d3.select("svg").append("g")
+              .attr("transform", "translate("+margin+","+margin+")")
+              .selectAll("rect")
+              .data(count1)
+              .enter()
+              .append("rect")
+              .attr("x", function(d,i) {return xs(d.condition);})
+              .attr("width", 50)
+              .attr("height", 0)
+              .attr("y", 490)
+              .attr("class", "bar")
+              // references: https://stackoverflow.com/questions/69246302/d3-why-on-mousehover-field-is-undefined-and-d3-event-is-undefined-too 
+              //             lecture notes 8-3-2
+              .on("mouseover", function(event, d){tooltip.style("opacity", 0.65)
+              .style("left",(event.pageX+15)+"px")
+              .style("top", (event.pageY+15)+"px")
+              .style("font-family", "Arial")
+              .style("font-size", "12px")
+              .html("Percent Deceased: " + ((d.death/d.num)*100).toFixed(2) + "%")})
+              .on('mouseout', function() {tooltip.style("opacity",0)})
+              // reference: lecture notes 8-3-5 
+              .transition().duration(1500).delay(250)
+              .attr("y", function(d,i) {return ys(d.num);})
+              .attr("height", function(d,i) {return height-ys(d.num);});
+
+            d3.select("svg")
+                .append("g")
+                .attr("class", "scene1Annotation")
+                .style("font-family", "Arial")
+                .style("font-size", "13px")
+                .call(annotations);        
+
+            // creating y axis
+            // reference: lecture notes 8-1-3
+            d3.select("svg").append("g")
+              .attr("transform", "translate("+margin+","+margin+")")
+              .style("font", "13px Arial")
+              .call(d3.axisLeft(ys));
+
+            // y axis title
+            // reference: https://d3-graph-gallery.com/graph/custom_axis.html 
+            d3.select("svg")
+              .append("text")
+              .attr("transform", "translate(18,310) rotate(270)")
+              .style("text-anchor", "middle")
+              .attr("class", "axisTitles")
+              .text("Number of Patients");
+            
+            // creating x axis
+            d3.select("svg").append("g")
+              .attr("transform", "translate("+margin+","+(height+margin)+")")
+              .style("font", "13px Arial")
+              .call(d3.axisBottom(xs));
+            
+            // x axis title
+            d3.select("svg")
+              .append("text")
+              .attr("transform", "translate("+(400+margin)+","+(height+margin+45)+")")
+              .style("text-anchor", "middle")
+              .attr("class", "axisTitles")
+              .text("Conditions");
+
+            // bar chart title
+            d3.select("svg")
+              .append("text")
+              .attr("transform", "translate("+(400+margin)+","+(38)+")")
+              .style("text-anchor", "middle")
+              .style("font", "18px Arial")
+              .attr("class", "chartTitle")
+              .text("Follow-up Period: 0-100 Days");
+            
+        }
+
+        function createSceneOne(){
+
+            // removing bars, annotations, and title from last scene
+            // reference: https://www.geeksforgeeks.org/d3-js-selection-remove-function/ 
+            d3.selectAll("rect").remove();
+            d3.selectAll(".scene1Annotation").remove();
+            d3.selectAll(".chartTitle").remove();
+
+            // creating annotations for scene 1
+            const annotation = [{note:{
+                                label:"Though more patients suffered from Anemia, the patients who smoked had slightly greater mortality.",
+                                wrap: 150,
+                                padding: 5
+                            },
+                            connector: {
+                                end: "arrow",
+                            },
+                            x: 685,
+                            y: 210,
+                            dx: 5,
+                            dy: -55
+                        }];
+
+            const annotations = d3.annotation().annotations(annotation);
+
+            var tooltip = d3.select("#tooltip");
+
+            // creating bar chart for scene 1
+            d3.select("svg").append("g")
+            .attr("transform", "translate("+margin+","+margin+")")
+            .selectAll("rect")
+            .data(count1)
+            .enter()
+            .append("rect")
+            .attr("x", function(d,i) {return xs(d.condition);})
+            .attr("width", 50)
+            .attr("height", 0)
+            .attr("y", 490)
+            .attr("class", "bar")
+            .on("mouseover", function(event, d){tooltip.style("opacity", 0.65)
+            .style("left",(event.pageX+15)+"px")
+            .style("top", (event.pageY+15)+"px")
+            .style("font-family", "Arial")
+            .style("font-size", "12px")
+            .html("Percent Deceased: " + ((d.death/d.num)*100).toFixed(2) + "%")})
+            .on('mouseout', function() {tooltip.style("opacity",0)})
+            .transition().duration(1500).delay(250)
+            .attr("y", function(d,i) {return ys(d.num);})
+            .attr("height", function(d,i) {return height-ys(d.num);});
+
+            d3.select("svg")
+                .append("g")
+                .attr("class", "scene1Annotation")
+                .style("font-family", "Arial")
+                .style("font-size", "13px")
+                .call(annotations);
+
+            // bar chart title
+            d3.select("svg")
+            .append("text")
+            .attr("transform", "translate("+(400+margin)+","+(38)+")")
+            .style("text-anchor", "middle")
+            .style("font", "18px Arial")
+            .attr("class", "chartTitle")
+            .text("Follow-up Period: 0-100 Days");           
+
+        }
+
+        function createSceneTwo(){
+           
+            // removing bars, annotations, and title from last scene
+            d3.selectAll("rect").remove();
+            d3.selectAll(".scene1Annotation").remove();
+            d3.selectAll(".chartTitle").remove();
+
+            // creating annotations for scene 2
+            const annotation = [{note:{
+                                label:"The mortality percentage for patients who smoke has the greatest decrease - from 60.98% (previous scene) to 12.90%. The other three disorders also exhibit a decrease in mortality percentages.",
+                                wrap: 165,
+                                padding: 5
+                            },
+                            connector: {
+                                end: "arrow",
+                            },
+                            x: 675,
+                            y: 290,
+                            dx: 2,
+                            dy: -55
+                        },
+                        {note:{
+                                label:"Observe that the number of patients diagnosed with each disorder has decreased from the last scene.",
+                                wrap: 180,
+                                padding: 5
+                            },
+                            connector: {
+                                end: "arrow",
+                            },
+                            x: 200,
+                            y: 200,
+                            dx: 10,
+                            dy: -55
+                        }];
+
+            const annotations = d3.annotation().annotations(annotation);
+
+            var tooltip = d3.select("#tooltip");
+
+            // creating bar chart for scene 2
+            d3.select("svg").append("g")
+                .attr("transform", "translate("+margin+","+margin+")")
+                .selectAll("rect")
+                .data(count2)
+                .enter()
+                .append("rect")
+                .attr("x", function(d,i) {return xs(d.condition);})
+                .attr("width", 50)
+                .attr("height", 0)
+                .attr("y", 490)
+                .attr("class", "bar")
+                .on("mouseover", function(event, d){tooltip.style("opacity", 0.65)
+                .style("left",(event.pageX+15)+"px")
+                .style("top", (event.pageY+15)+"px")
+                .style("font-family", "Arial")
+                .style("font-size", "12px")
+                .html("Percent Deceased: " + ((d.death/d.num)*100).toFixed(2) + "%")})
+                .on('mouseout', function() {tooltip.style("opacity",0)})
+                .transition().duration(1500).delay(250)
+                .attr("y", function(d,i) {return ys(d.num);})
+                .attr("height", function(d,i) {return height-ys(d.num);});
+
+            d3.select("svg")
+                .append("g")
+                .attr("class", "scene1Annotation")
+                .style("font-family", "Arial")
+                .style("font-size", "13px")
+                .call(annotations);
+
+            // bar chart title
+            d3.select("svg")
+                .append("text")
+                .attr("transform", "translate("+(400+margin)+","+(38)+")")
+                .style("text-anchor", "middle")
+                .style("font", "18px Arial")
+                .attr("class", "chartTitle")
+                .text("Follow-up Period: 100-200 Days");
+
+       }
+
+       function createSceneThree(){
+
+            // removing bars, annotations, and title from last scene
+            d3.selectAll("rect").remove();
+            d3.selectAll(".scene1Annotation").remove();
+            d3.selectAll(".chartTitle").remove();
+
+            // creating annotations for scene 3
+            const annotation = [{note:{
+                                label:"Diabetes is more common in patients whose followup period ranges from 200-300 days.",
+                                wrap: 220,
+                                padding: 5
+                            },
+                            connector: {
+                                end: "arrow",
+                            },
+                            x: 350,
+                            y: 260,
+                            dx: -5,
+                            dy: -55
+                        },
+                        {note:{
+                                label:"The mortality rate has decreased from the last scene across all disorders. Namely, in patients with high blood pressure, the mortality rate is 0% now.",
+                                wrap: 200,
+                                padding: 5
+                            },
+                            connector: {
+                                end: "arrow",
+                            },
+                            x: 515,
+                            y: 430,
+                            dx: 2,
+                            dy: -95
+                        }];
+
+            const annotations = d3.annotation().annotations(annotation);
+
+            var tooltip = d3.select("#tooltip");
+
+            // creating bar chart for scene 3
+            d3.select("svg").append("g")
+            .attr("transform", "translate("+margin+","+margin+")")
+            .selectAll("rect")
+            .data(count3)
+            .enter()
+            .append("rect")
+            .attr("x", function(d,i) {return xs(d.condition);})
+            .attr("width", 50)
+            .attr("height", 0)
+            .attr("y", 490)
+            .attr("class", "bar")
+            .on("mouseover", function(event, d){tooltip.style("opacity", 0.65)
+            .style("left",(event.pageX+15)+"px")
+            .style("top", (event.pageY+15)+"px")
+            .style("font-family", "Arial")
+            .style("font-size", "12px")
+            .html("Percent Deceased: " + ((d.death/d.num)*100).toFixed(2) + "%")})
+            .on('mouseout', function() {tooltip.style("opacity",0)})
+            .transition().duration(1500).delay(250)
+            .attr("y", function(d,i) {return ys(d.num);})
+            .attr("height", function(d,i) {return height-ys(d.num);});
+
+            d3.select("svg")
+            .append("g")
+            .attr("class", "scene1Annotation")
+            .style("font-family", "Arial")
+            .style("font-size", "13px")
+            .call(annotations);
+
+            // bar chart title
+            d3.select("svg")
+            .append("text")
+            .attr("transform", "translate("+(400+margin)+","+(38)+")")
+            .style("text-anchor", "middle")
+            .style("font", "18px Arial")
+            .attr("class", "chartTitle")
+            .text("Follow-up Period: 200-300 Days");
+
+        }
+
+        // creating the event listeners
+        var slide1 = document.getElementById("slideOne");
+        slide1.addEventListener("click", createSceneOne);
+
+        var slide2 = document.getElementById("slideTwo");
+        slide2.addEventListener("click", createSceneTwo);
+
+        var slide3 = document.getElementById("slideThree");
+        slide3.addEventListener("click", createSceneThree);
+
+    </script>
+</body>
+</html>
